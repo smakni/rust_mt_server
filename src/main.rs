@@ -1,3 +1,4 @@
+use rust_mt_web_server::ThreadPool;
 use std::{
     fs,
     io::{prelude::*, BufReader},
@@ -6,25 +7,24 @@ use std::{
     time::Duration,
 };
 
-use rust_mt_web_server::ThreadPool;
-
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let pool = ThreadPool::new(4);
 
-    for stream in listener.incoming() {
+    for stream in listener.incoming().take(2) {
         let stream = stream.unwrap();
-        let pool = ThreadPool::new(4);
 
         // println!("Connection established!");
         pool.execute(|| {
             handle_connection(stream)
         });
+
+        println!("Shutting down.");
     }
 }
 
 fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
-
     let request_line = buf_reader.lines().next().unwrap().unwrap();
 
     let (status_line, filename) = match &request_line[..] {
